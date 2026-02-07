@@ -1,9 +1,12 @@
-from sqlalchemy import Integer, create_engine
+from datetime import datetime
+
+from sqlalchemy import Integer, create_engine, DateTime
 from sqlalchemy.orm import declared_attr, Mapped, DeclarativeBase, mapped_column
+from sqlalchemy.sql.functions import now
 
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, sort_order=-1)
 
     @declared_attr
     def __tablename__(cls):
@@ -20,7 +23,12 @@ class Base(DeclarativeBase):
         return name.lower() + 's'
 
 
+class CreatedBase(Base):
+    __abstract__ = True
+    updated_at: Mapped[datetime] = mapped_column(DateTime, insert_default=now(), server_onupdate=now(), sort_order=99)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=now(), sort_order=100)
+
+
 pg_url = "postgresql://postgres:1@localhost:5432/sqlalchemy_db"
 
 engine = create_engine(pg_url)
-

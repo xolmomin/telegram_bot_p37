@@ -4,6 +4,8 @@
 .idea/**/dictionaries
 .idea/**/shelf
 .idea/**/aws.xml
+.idea
+migrations
 .idea/**/contentModel.xml
 .idea/**/dataSources/
 .idea/**/dataSources.ids
