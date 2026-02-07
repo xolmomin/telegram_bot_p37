@@ -102,3 +102,32 @@ with Session(engine) as session:
 # Task
 # 1. kurs crud
 # 2. student crud
+
+"""
+Menyular
+1. kurs qo'shish
+2. kurs o'chirish
+3. kursni o'zgartirish
+4. kurslarni ko'rish
+5. student qo'shish
+6. student o'chirish
+7. studentni o'zgartirish
+8. studentlarni ko'rish
+0. exit
+
+Homework
+
+Menyular
+1. kurs qo'shish
+2. kurs o'chirish
+3. kursni o'zgartirish
+4. kurslarni ko'rish
+5. student qo'shish
+6. student o'chirish
+7. studentni o'zgartirish
+8. kursga student qo'shish
+9. kursdan studentni o'chirish
+10. kursdan kursga ko'chirish
+
+"""
+
