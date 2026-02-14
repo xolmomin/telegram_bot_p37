@@ -9,6 +9,7 @@ from models.courses import Course, user_courses
 
 class User(CreatedBase):
     first_name: Mapped[str] = mapped_column(String(255))
+    last_name: Mapped[str] = mapped_column(String(255), nullable=True)
     phone: Mapped[str] = mapped_column(String(12), unique=True)
     last_login: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     adverts: Mapped[list['Advert']] = relationship('Advert', back_populates='owner')
