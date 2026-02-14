@@ -4,7 +4,6 @@ from sqlalchemy import String, DateTime, Integer, UniqueConstraint, CheckConstra
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from models.base import CreatedBaseModel, Model
-from models.courses import Course
 
 
 class User(CreatedBaseModel):

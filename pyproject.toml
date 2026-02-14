@@ -13,3 +13,8 @@ dependencies = [
 [tool.alembic]
 script_location = "migrations"
 #file_template = "%%(year)d%%(month)d%%(day)d_%%(rev)s"
+
+[dependency-groups]
+dev = [
+    "flake8>=7.3.0",
+]
