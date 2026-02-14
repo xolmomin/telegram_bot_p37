@@ -1,4 +1,3 @@
-from models.adverts import Advert, AdvertImage, Category
+from models.adverts import Advert, AdvertImage, Category, Region, District
 from models.users import User, Course
-from models.base import CreatedBase
-from models.base import Base
+from models.base import Model, Base, CreatedBaseModel

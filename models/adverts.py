@@ -2,12 +2,11 @@ from datetime import datetime
 
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy.sql.functions import now
 
-from models.base import Base, CreatedBase
+from models.base import Model, CreatedBaseModel
 
 
-class Category(Base):
+class Category(Model):
     name: Mapped[str] = mapped_column(String(255))
     slug: Mapped[str] = mapped_column(String(255), unique=True)
     adverts: Mapped[list['Advert']] = relationship('Advert', back_populates='category')
@@ -16,7 +15,7 @@ class Category(Base):
         return f"{self.id} - {self.name}"
 
 
-class Advert(CreatedBase):
+class Advert(CreatedBaseModel):
     name: Mapped[str] = mapped_column(String(255))
     slug: Mapped[str] = mapped_column(String(255), unique=True)
     price: Mapped[int] = mapped_column(Integer)
@@ -34,18 +33,18 @@ class Advert(CreatedBase):
     images: Mapped[list['AdvertImage']] = relationship('AdvertImage', back_populates='advert')
 
 
-class AdvertImage(Base):
+class AdvertImage(Model):
     image: Mapped[str] = mapped_column(String(255))
     advert_id: Mapped[int] = mapped_column(ForeignKey('adverts.id'))
     advert: Mapped['Advert'] = relationship('Advert', back_populates='images')
 
 
-class Region(Base):
+class Region(Model):
     name: Mapped[str] = mapped_column(String(255))
     districts: Mapped[list['District']] = relationship('District', back_populates='region')
 
 
-class District(Base):
+class District(Model):
     name: Mapped[str] = mapped_column(String(255))
     region_id: Mapped[int] = mapped_column(ForeignKey('regions.id'))
     region: Mapped['Region'] = relationship('Region', back_populates='districts')
@@ -55,4 +54,3 @@ class District(Base):
 
     def __repr__(self):
         return self.name
-
