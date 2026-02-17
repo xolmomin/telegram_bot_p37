@@ -152,9 +152,15 @@ class AbstractClass:
 
 class Model(AbstractClass, Base):
     __abstract__ = True
+    excluded = ['id']
 
 
 class CreatedBaseModel(Model):
     __abstract__ = True
     updated_at: Mapped[datetime] = mapped_column(DateTime, insert_default=now(), server_onupdate=now(), sort_order=99)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=now(), sort_order=100)
+    excluded = ['id', 'updated_at', 'created_at']
+
+    @classmethod
+    def column_names(cls):
+        return set(cls.__table__.columns.keys()) - set(cls.excluded)
