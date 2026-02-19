@@ -5,15 +5,12 @@
 
 
 
-barcha metodlarni
-
-bot -> user
-user -> bot
 
 
-button
-inline button
-FSMContext
-
+oddiy button da amalga oshiramiz
+bot.set_my_name()
+bot.set_my_description()
+bot.set_my_short_description()
+bot.set_my_profile_photo()
 
 
