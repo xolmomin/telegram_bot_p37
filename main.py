@@ -42,6 +42,7 @@
 import asyncio
 import logging
 import sys
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -49,96 +50,156 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, KeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.types import Message
 
-TOKEN = '8359753576:AAHeVGWO71W5Pk2V77IfdbZY3Fs5_pKh8e0'
+TOKEN = '8359753576:AAGNCDVZ5W2IUkypaSM8RSS4CkAUBv-wID4'
 
-dp = Dispatcher()
+redis_url = 'redis://localhost:6379/0'
+dp = Dispatcher(storage=RedisStorage.from_url(redis_url))
+
 ADMIN_ID = 514411336
 
 
-class SettingForm(StatesGroup):
-    name = State()
+class Form(StatesGroup):
+    brand = State()
+    model = State()
+    image = State()
+    release_year = State()
 
-# name
-# phone_number
+
+@dp.message(Form.brand)
+async def command_start(message: Message, state: FSMContext) -> None:
+    await state.update_data(brand=message.text)
+    await state.set_state(Form.model)
+    await message.answer('Modelni kiriting (Nexia 3)')
+
+
+@dp.message(Form.model)
+async def command_start(message: Message, state: FSMContext) -> None:
+    await state.update_data(model=message.text)
+    await state.set_state(Form.image)
+    await message.answer('Mashina rasmini tashang')
+
+
+@dp.message(Form.image)
+async def command_start(message: Message, state: FSMContext) -> None:
+    if message.photo is None:
+        await message.reply('Mashina rasmini tashang (rasm formatda kelsin)')
+        return
+    file_id = message.photo[-1].file_id
+    await state.update_data(image=file_id)
+    await state.set_state(Form.release_year)
+    await message.answer('Mashina yilini kiriting (2005 dan keyin bolishi kerak)')
+
+
+@dp.message(Form.release_year)
+async def command_start(message: Message, state: FSMContext) -> None:
+    year = message.text
+
+    if year.isdigit() and 2005 < int(year) <= datetime.now().year:
+        await state.update_data(release_year=year)
+        data = await state.get_data()
+        await state.clear()
+        text = (f"<b>Brand:</b> {data['brand']}\n"
+                f"<b>Model:</b> {data['model']}\n"
+                f"<b>Release Year:</b> {data['release_year']}\n")
+        await message.answer_photo(data['image'], caption=text)
+    else:
+        await message.reply('Yil 2005 dan katta bolsin')
+
 
 @dp.message(CommandStart())
-async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-    text = "Xush kelibsiz!"
-    rkm = ReplyKeyboardBuilder()
-    rkm.add(
-        KeyboardButton(text='Name'),
-        KeyboardButton(text='Description'),
-        KeyboardButton(text='Photo')
-    )
-    await message.answer(text, reply_markup=rkm.as_markup(resize_keyboard=True))
-    # await state.set_state(Form.name)
-    # await message.answer("Seminarga xush kelibsiz\n ismingizni kiriting!")
+async def command_start(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.brand)
+    await message.answer('Xush kelibsiz')
+    await message.answer('Brand ni kiriting (Chevrolet)')
 
 
-@dp.message(lambda msg: msg.text == 'Name')
-async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-    await state.set_state(SettingForm.name)
-    await message.answer('Bot uchun nom kiriting')
-
-
-@dp.message(SettingForm.name)
-async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-    await state.clear()
-    await bot.set_my_name(message.text)
-    await message.answer('Bot nomi ozgartirildi')
-
-
-# @dp.message(Form.name)
+#
+#
+# class SettingForm(StatesGroup):
+#     name = State()
+#
+# # name
+# # phone_number
+#
+# @dp.message(CommandStart())
 # async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-#     await state.update_data(name=message.text)
-#     await state.set_state(Form.age)
-#     await message.answer("yoshingizni kiriting")
-#
-#
-# @dp.message(Form.age)
-# async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-#     await state.update_data(age=message.text)
-#     await state.set_state(Form.phone)
-#     await message.answer("nomer kiriting")
-#
-#
-# @dp.message(Form.phone)
-# async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
-#     await state.update_data(phone=message.text)
-#     data = await state.get_data()
-#
-#     text = ''
-#     for k, v in data.items():
-#         text += f'{k}: {v}\n'
-#
-#     # await state.clear()
-#     ikm = InlineKeyboardBuilder()
-#     ikm.add(
-#         InlineKeyboardButton(text='Yes', style='success', callback_data='yes'),
-#         InlineKeyboardButton(text='No', style='danger', callback_data='no')
+#     text = "Xush kelibsiz!"
+#     rkm = ReplyKeyboardBuilder()
+#     rkm.add(
+#         KeyboardButton(text='Name'),
+#         KeyboardButton(text='Description'),
+#         KeyboardButton(text='Photo')
 #     )
-#     await message.answer(f"Malumotlarni to'g'rimi?\n{text}", reply_markup=ikm.as_markup())
-
-
-# p37_group_bot
-@dp.callback_query()
-async def calling_function(callback: CallbackQuery, bot: Bot, state: FSMContext) -> None:
-    if callback.data == 'yes':
-        data = await state.get_data()
-        text = ''
-        for k, v in data.items():
-            text += f'{k}: {v}\n'
-        await bot.send_message(ADMIN_ID, text)
-        await callback.message.delete()
-
-    elif callback.data == 'no':
-        await callback.message.answer('malumotlarni qayta kiriting /start')
-        await callback.message.delete()
-
-
+#     await message.answer(text, reply_markup=rkm.as_markup(resize_keyboard=True))
+#     # await state.set_state(Form.name)
+#     # await message.answer("Seminarga xush kelibsiz\n ismingizni kiriting!")
+#
+#
+# @dp.message(lambda msg: msg.text == 'Name')
+# async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
+#     await state.set_state(SettingForm.name)
+#     await message.answer('Bot uchun nom kiriting')
+#
+#
+# @dp.message(SettingForm.name)
+# async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
+#     await state.clear()
+#     await bot.set_my_name(message.text)
+#     await message.answer('Bot nomi ozgartirildi')
+#
+#
+# # @dp.message(Form.name)
+# # async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
+# #     await state.update_data(name=message.text)
+# #     await state.set_state(Form.age)
+# #     await message.answer("yoshingizni kiriting")
+# #
+# #
+# # @dp.message(Form.age)
+# # async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
+# #     await state.update_data(age=message.text)
+# #     await state.set_state(Form.phone)
+# #     await message.answer("nomer kiriting")
+# #
+# #
+# # @dp.message(Form.phone)
+# # async def command_start(message: Message, bot: Bot, state: FSMContext) -> None:
+# #     await state.update_data(phone=message.text)
+# #     data = await state.get_data()
+# #
+# #     text = ''
+# #     for k, v in data.items():
+# #         text += f'{k}: {v}\n'
+# #
+# #     # await state.clear()
+# #     ikm = InlineKeyboardBuilder()
+# #     ikm.add(
+# #         InlineKeyboardButton(text='Yes', style='success', callback_data='yes'),
+# #         InlineKeyboardButton(text='No', style='danger', callback_data='no')
+# #     )
+# #     await message.answer(f"Malumotlarni to'g'rimi?\n{text}", reply_markup=ikm.as_markup())
+#
+#
+# # p37_group_bot
+# @dp.callback_query()
+# async def calling_function(callback: CallbackQuery, bot: Bot, state: FSMContext) -> None:
+#     if callback.data == 'yes':
+#         data = await state.get_data()
+#         text = ''
+#         for k, v in data.items():
+#             text += f'{k}: {v}\n'
+#         await bot.send_message(ADMIN_ID, text)
+#         await callback.message.delete()
+#
+#     elif callback.data == 'no':
+#         await callback.message.answer('malumotlarni qayta kiriting /start')
+#         await callback.message.delete()
+#
+#
 # @dp.message(Command('del'))
 # async def command_start_handler(message: Message, bot: Bot) -> None:
 #     await bot.delete_messages(message.chat.id, list(range(message.message_id, 0, -1))[:99])
@@ -179,7 +240,6 @@ async def calling_function(callback: CallbackQuery, bot: Bot, state: FSMContext)
 #     else:
 #         await callback.answer(f"{callback.data} bu kalit")
 
-
 # async def startup(bot: Bot) -> None:
 #     await bot.set_my_name('Yangi bot')
 #     await bot.send_message(ADMIN_ID, 'bot started!')
@@ -187,7 +247,6 @@ async def calling_function(callback: CallbackQuery, bot: Bot, state: FSMContext)
 #         BotCommand(command='del', description='Ochirish uchun'),
 #         BotCommand(command='edit', description='ozgartirish uchun')
 #     ], scope=BotCommandScopeAllPrivateChats())
-
 
 async def shutdown(bot: Bot) -> None:
     await bot.send_message(ADMIN_ID, 'bot stopped!')
