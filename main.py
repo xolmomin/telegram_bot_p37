@@ -52,7 +52,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 TOKEN = '8359753576:AAGNCDVZ5W2IUkypaSM8RSS4CkAUBv-wID4'
 
@@ -63,58 +64,125 @@ ADMIN_ID = 514411336
 
 
 class Form(StatesGroup):
-    brand = State()
-    model = State()
+    first_name = State()
+    birth_date = State()
     image = State()
-    release_year = State()
-
-
-@dp.message(Form.brand)
-async def command_start(message: Message, state: FSMContext) -> None:
-    await state.update_data(brand=message.text)
-    await state.set_state(Form.model)
-    await message.answer('Modelni kiriting (Nexia 3)')
-
-
-@dp.message(Form.model)
-async def command_start(message: Message, state: FSMContext) -> None:
-    await state.update_data(model=message.text)
-    await state.set_state(Form.image)
-    await message.answer('Mashina rasmini tashang')
-
-
-@dp.message(Form.image)
-async def command_start(message: Message, state: FSMContext) -> None:
-    if message.photo is None:
-        await message.reply('Mashina rasmini tashang (rasm formatda kelsin)')
-        return
-    file_id = message.photo[-1].file_id
-    await state.update_data(image=file_id)
-    await state.set_state(Form.release_year)
-    await message.answer('Mashina yilini kiriting (2005 dan keyin bolishi kerak)')
-
-
-@dp.message(Form.release_year)
-async def command_start(message: Message, state: FSMContext) -> None:
-    year = message.text
-
-    if year.isdigit() and 2005 < int(year) <= datetime.now().year:
-        await state.update_data(release_year=year)
-        data = await state.get_data()
-        await state.clear()
-        text = (f"<b>Brand:</b> {data['brand']}\n"
-                f"<b>Model:</b> {data['model']}\n"
-                f"<b>Release Year:</b> {data['release_year']}\n")
-        await message.answer_photo(data['image'], caption=text)
-    else:
-        await message.reply('Yil 2005 dan katta bolsin')
 
 
 @dp.message(CommandStart())
-async def command_start(message: Message, state: FSMContext) -> None:
-    await state.set_state(Form.brand)
-    await message.answer('Xush kelibsiz')
-    await message.answer('Brand ni kiriting (Chevrolet)')
+async def handle_first_receive(message: Message, state: FSMContext):
+    await state.set_state(Form.first_name)
+    await message.answer('Ism kiriting')
+
+
+@dp.message(Form.first_name)
+async def handle_first_receive(message: Message, state: FSMContext):
+    first_name = message.text
+    if first_name.replace("'", '').isalpha():
+        await state.update_data(first_name=first_name.title())
+        await state.set_state(Form.birth_date)
+        await message.answer('Tugilgan kun kiriting')
+    else:
+        await message.answer('Ism togri kiriting')
+
+
+@dp.message(Form.birth_date)
+async def handle_first_receive(message: Message, state: FSMContext):
+    birth_date = message.text
+    try:
+        birth_date = datetime.strptime(birth_date, '%Y.%m.%d')
+    except Exception as e:
+        await message.answer('tugilgan sanani togri kiriting')
+        return
+
+    age = datetime.now().year - birth_date.year
+    if age <= 18:
+        await message.answer('yoshingiz kichkina!')
+        return
+
+    await state.update_data(birth_date=message.text, age=age)
+    await state.set_state(Form.image)
+    await message.answer('Rasm kiriting')
+
+
+@dp.message(Form.image)
+async def handle_first_receive(message: Message, state: FSMContext):
+    photo = message.photo
+    if photo is None:
+        await message.answer('Rasm xato')
+        return
+    await state.update_data(photo=photo[-1].file_id)
+    data = await state.get_data()
+    text = (f"*Ism*: {data['first_name']}\n"
+            f"*Tugilgan kun*: {data['birth_date'].replace('.', r'\.')}\n"
+            f"*Yoshi*: {data['age']}\n"
+            f"*Telegram ID*: ||{message.from_user.id}||")
+
+    ikm = InlineKeyboardBuilder()
+    ikm.add(
+        InlineKeyboardButton(text='Ismn ✏️', callback_data='change_name'),
+        InlineKeyboardButton(text='Tugilgan kun ✏️', callback_data='change_birth_date'),
+        InlineKeyboardButton(text='Rasm ✏️', callback_data='change_photo'),
+    )
+    ikm.adjust(1)
+
+    await message.answer_photo(data['photo'], caption=text, parse_mode=ParseMode.MARKDOWN_V2,
+                               reply_markup=ikm.as_markup())
+
+
+# class Form(StatesGroup):
+#     brand = State()
+#     model = State()
+#     image = State()
+#     release_year = State()
+#
+#
+# @dp.message(Form.brand)
+# async def command_start(message: Message, state: FSMContext) -> None:
+#     await state.update_data(brand=message.text)
+#     await state.set_state(Form.model)
+#     await message.answer('Modelni kiriting (Nexia 3)')
+#
+#
+# @dp.message(Form.model)
+# async def command_start(message: Message, state: FSMContext) -> None:
+#     await state.update_data(model=message.text)
+#     await state.set_state(Form.image)
+#     await message.answer('Mashina rasmini tashang')
+#
+#
+# @dp.message(Form.image)
+# async def command_start(message: Message, state: FSMContext) -> None:
+#     if message.photo is None:
+#         await message.reply('Mashina rasmini tashang (rasm formatda kelsin)')
+#         return
+#     file_id = message.photo[-1].file_id
+#     await state.update_data(image=file_id)
+#     await state.set_state(Form.release_year)
+#     await message.answer('Mashina yilini kiriting (2005 dan keyin bolishi kerak)')
+#
+#
+# @dp.message(Form.release_year)
+# async def command_start(message: Message, state: FSMContext) -> None:
+#     year = message.text
+#
+#     if year.isdigit() and 2005 < int(year) <= datetime.now().year:
+#         await state.update_data(release_year=year)
+#         data = await state.get_data()
+#         await state.clear()
+#         text = (f"<b>Brand:</b> {data['brand']}\n"
+#                 f"<b>Model:</b> {data['model']}\n"
+#                 f"<b>Release Year:</b> {data['release_year']}\n")
+#         await message.answer_photo(data['image'], caption=text)
+#     else:
+#         await message.reply('Yil 2005 dan katta bolsin')
+#
+#
+# @dp.message(CommandStart())
+# async def command_start(message: Message, state: FSMContext) -> None:
+#     await state.set_state(Form.brand)
+#     await message.answer('Xush kelibsiz')
+#     await message.answer('Brand ni kiriting (Chevrolet)')
 
 
 #
@@ -248,8 +316,8 @@ async def command_start(message: Message, state: FSMContext) -> None:
 #         BotCommand(command='edit', description='ozgartirish uchun')
 #     ], scope=BotCommandScopeAllPrivateChats())
 
-async def shutdown(bot: Bot) -> None:
-    await bot.send_message(ADMIN_ID, 'bot stopped!')
+# async def shutdown(bot: Bot) -> None:
+#     await bot.send_message(ADMIN_ID, 'bot stopped!')
 
 
 async def main() -> None:
@@ -262,3 +330,26 @@ async def main() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
+
+"""
+
+first_name
+birth_date 2000.11.26 (kamida 18 yosh)
+image
+
+
+
+Botdan userga keladigan shablon
+Ismi: Botirjon
+Tug'ilgan kuni: 2000.11.26
+Yoshi: 25
+Telegram ID: 3572615
+
+inline button
+
+
+
+
+
+
+"""
